@@ -1,8 +1,19 @@
-r_pin=1 
-g_pin=2
-b_pin=3
+BRIGHT     = 0.1
+ON         = BRIGHT * 255
+
+LED_PIN    = 4       -- GPIO2
+PIXELS     = 15      -- pixels number on led strip
+
+
+RED   = string.char( 0, ON,  0)
+GREEN = string.char(ON,  0,  0)
+BLUE  = string.char( 0,  0, ON)
+WHITE = string.char(ON, ON, ON)
+BLACK = string.char( 0,  0,  0)
+
+
 current_hue = 0
-current_sat = 1
+current_sat = 0.1
 current_lum = 0.5
 
 
@@ -31,7 +42,7 @@ function hslToRgb(h, s, l)
     b = hue2rgb(p, q, h - 1/3)
   end
 
-  return math.floor(r * 1023 + 0.5), math.floor(g * 1023 + 0.5), math.floor(b * 1023 + 0.5)
+  return math.floor(r * 255 + 0.5), math.floor(g * 255 + 0.5), math.floor(b * 255 + 0.5)
 end
 
 
@@ -47,7 +58,7 @@ function admin(s, c)
         -- (256 -x + 181)/256*360
         current_hue = (((256-arg+176)/256*360) % 360)/360
         current_lum = 0.5
-    -- increase lightness
+        -- increase lightness
     elseif cmd==35 then
         act = true
         current_lum = current_lum + 0.05
@@ -68,24 +79,25 @@ function admin(s, c)
         current_sat = current_sat - 0.05
         if current_sat < 0 then current_sat = 0 end
     -- turn lights off
-    elseif cmd==34 then
-        pwm.stop(r_pin)
-        pwm.stop(g_pin)
-        pwm.stop(b_pin)
-    -- turn lights on
     elseif cmd==33 then
-        pwm.start(r_pin)
-        pwm.start(g_pin)
-        pwm.start(b_pin)
+        leds_grb = BLACK
+        ws2812.write(LED_PIN, leds_grb:rep(PIXELS)) 
+        
+    -- turn lights on
+    elseif cmd==34 then
+        leds_grb = WHITE
+        ws2812.write(LED_PIN, leds_grb:rep(PIXELS)) 
     end
 
+   
     if act then
+             
         r, g, b = hslToRgb(current_hue, current_sat, current_lum)
-                
-        pwm.setduty(r_pin, r)
-        pwm.setduty(g_pin, g)
-        pwm.setduty(b_pin, b)
+        leds_grb = string.char(g, r, b)
+        ws2812.write(LED_PIN, leds_grb:rep(PIXELS))
     end
+                
+    
    
 end
 
@@ -93,7 +105,3 @@ s=net.createServer(net.UDP)
 s:on("receive", admin)
 s:listen(8899)
 print("Server ready")
-
-pwm.setup(r_pin, 1000, 5)
-pwm.setup(g_pin, 1000, 5)
-pwm.setup(b_pin, 1000, 5)
